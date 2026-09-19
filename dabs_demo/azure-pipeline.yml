@@ -1,5 +1,6 @@
-# Azure pipeline for DAB
+# Azure pipeline for Databricks Asset Bundles
 # Manual trigger
+
 trigger: none
 
 pool:
@@ -28,36 +29,41 @@ stages:
 
         steps:
 
-          # --------------------------------------------------
-          # 1. Checkout repository
-          # --------------------------------------------------
+          # ---------------------------------------------------------
+          # 1. Checkout source code
+          # ---------------------------------------------------------
           - checkout: self
             displayName: 'Checkout Branch: $(Build.SourceBranchName)'
 
-          # --------------------------------------------------
+
+          # ---------------------------------------------------------
           # 2. Install Databricks CLI
-          # --------------------------------------------------
+          # ---------------------------------------------------------
           - script: |
-              echo "Install Databricks CLI..."
+              echo "Installing Databricks CLI..."
               curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
+
+              echo "Databricks CLI version:"
               databricks version
             displayName: 'Install Databricks CLI'
 
-          # --------------------------------------------------
-          # 3. Setup Databricks OAuth M2M profile
-          # --------------------------------------------------
+
+          # ---------------------------------------------------------
+          # 3. Setup Databricks M2M authentication profile
+          # ---------------------------------------------------------
           - script: |
               echo "[azure-sp]" > ~/.databrickscfg
               echo "host = $(DATABRICKS_HOST)" >> ~/.databrickscfg
               echo "client_id = $(CLIENT_ID)" >> ~/.databrickscfg
               echo "client_secret = $(CLIENT_SECRET)" >> ~/.databrickscfg
 
-              echo "Databricks profile created."
+              echo "Databricks M2M profile created."
             displayName: 'Setup M2M Profile for CLI Auth'
 
-          # --------------------------------------------------
-          # 4. Validate Databricks authentication
-          # --------------------------------------------------
+
+          # ---------------------------------------------------------
+          # 4. Validate Databricks CLI authentication
+          # ---------------------------------------------------------
           - script: |
               echo "Testing Databricks authentication..."
               databricks current-user me
@@ -66,14 +72,18 @@ stages:
               DATABRICKS_HOST: $(DATABRICKS_HOST)
               DATABRICKS_CLIENT_ID: $(CLIENT_ID)
               DATABRICKS_CLIENT_SECRET: $(CLIENT_SECRET)
+              DATABRICKS_AUTH_TYPE: oauth-m2m
 
-          # --------------------------------------------------
-          # 5. Databricks Bundle Validate
-          # --------------------------------------------------
+
+          # ---------------------------------------------------------
+          # 5. Validate DAB bundle
+          # ---------------------------------------------------------
           - script: |
-              echo "Validating Databricks Bundle..."
+              echo "Validating Databricks Asset Bundle..."
+
               databricks bundle validate \
                 --target ${{ parameters.env }} \
+                --profile azure-sp \
                 --var "catalog=${{ parameters.catalog }}"
             workingDirectory: $(Build.SourcesDirectory)/dabs_demo
             displayName: 'Databricks Bundle Validate'
@@ -81,14 +91,18 @@ stages:
               DATABRICKS_HOST: $(DATABRICKS_HOST)
               DATABRICKS_CLIENT_ID: $(CLIENT_ID)
               DATABRICKS_CLIENT_SECRET: $(CLIENT_SECRET)
+              DATABRICKS_AUTH_TYPE: oauth-m2m
 
-          # --------------------------------------------------
-          # 6. Databricks Bundle Summary
-          # --------------------------------------------------
+
+          # ---------------------------------------------------------
+          # 6. Bundle Summary
+          # ---------------------------------------------------------
           - script: |
               echo "Generating Databricks Bundle Summary..."
+
               databricks bundle summary \
                 --target ${{ parameters.env }} \
+                --profile azure-sp \
                 --var "catalog=${{ parameters.catalog }}"
             workingDirectory: $(Build.SourcesDirectory)/dabs_demo
             displayName: 'Databricks Bundle Summary'
@@ -96,14 +110,18 @@ stages:
               DATABRICKS_HOST: $(DATABRICKS_HOST)
               DATABRICKS_CLIENT_ID: $(CLIENT_ID)
               DATABRICKS_CLIENT_SECRET: $(CLIENT_SECRET)
+              DATABRICKS_AUTH_TYPE: oauth-m2m
 
-          # --------------------------------------------------
-          # 7. Databricks Bundle Deploy
-          # --------------------------------------------------
+
+          # ---------------------------------------------------------
+          # 7. Deploy DAB
+          # ---------------------------------------------------------
           - script: |
-              echo "Deploying Databricks Bundle..."
+              echo "Deploying Databricks Asset Bundle..."
+
               databricks bundle deploy \
                 --target ${{ parameters.env }} \
+                --profile azure-sp \
                 --var "catalog=${{ parameters.catalog }}"
             workingDirectory: $(Build.SourcesDirectory)/dabs_demo
             displayName: 'Databricks Bundle Deploy'
@@ -111,3 +129,4 @@ stages:
               DATABRICKS_HOST: $(DATABRICKS_HOST)
               DATABRICKS_CLIENT_ID: $(CLIENT_ID)
               DATABRICKS_CLIENT_SECRET: $(CLIENT_SECRET)
+              DATABRICKS_AUTH_TYPE: oauth-m2m
