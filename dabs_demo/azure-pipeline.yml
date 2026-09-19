@@ -19,42 +19,95 @@ parameters:
 
 stages:
   - stage: onRelease
+
     variables:
-      - group: ${{parameters.env}}_variables
+      - group: ${{ parameters.env }}_variables
 
     jobs:
-      - job: ${{parameters.env}}ReleaseJob
+      - job: ${{ parameters.env }}ReleaseJob
+
         steps:
+
+          # --------------------------------------------------
+          # 1. Checkout repository
+          # --------------------------------------------------
           - checkout: self
             displayName: 'Checkout Branch: $(Build.SourceBranchName)'
 
+          # --------------------------------------------------
+          # 2. Install Databricks CLI
+          # --------------------------------------------------
           - script: |
               echo "Install Databricks CLI..."
               curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
+              databricks version
             displayName: 'Install Databricks CLI'
 
+          # --------------------------------------------------
+          # 3. Setup Databricks OAuth M2M profile
+          # --------------------------------------------------
           - script: |
               echo "[azure-sp]" > ~/.databrickscfg
               echo "host = $(DATABRICKS_HOST)" >> ~/.databrickscfg
               echo "client_id = $(CLIENT_ID)" >> ~/.databrickscfg
               echo "client_secret = $(CLIENT_SECRET)" >> ~/.databrickscfg
+
+              echo "Databricks profile created."
             displayName: 'Setup M2M Profile for CLI Auth'
 
+          # --------------------------------------------------
+          # 4. Validate Databricks authentication
+          # --------------------------------------------------
           - script: |
-              databricks auth profiles
-            displayName: 'Validate databricks cli auth for ${{parameters.env}} environment'
+              echo "Testing Databricks authentication..."
+              databricks current-user me
+            displayName: 'Validate Databricks CLI Authentication'
+            env:
+              DATABRICKS_HOST: $(DATABRICKS_HOST)
+              DATABRICKS_CLIENT_ID: $(CLIENT_ID)
+              DATABRICKS_CLIENT_SECRET: $(CLIENT_SECRET)
 
+          # --------------------------------------------------
+          # 5. Databricks Bundle Validate
+          # --------------------------------------------------
           - script: |
-              databricks bundle validate --target ${{parameters.env}} --profile azure-sp --var "catalog=${{parameters.catalog}}"
+              echo "Validating Databricks Bundle..."
+              databricks bundle validate \
+                --target ${{ parameters.env }} \
+                --var "catalog=${{ parameters.catalog }}"
             workingDirectory: $(Build.SourcesDirectory)/dabs_demo
             displayName: 'Databricks Bundle Validate'
+            env:
+              DATABRICKS_HOST: $(DATABRICKS_HOST)
+              DATABRICKS_CLIENT_ID: $(CLIENT_ID)
+              DATABRICKS_CLIENT_SECRET: $(CLIENT_SECRET)
 
+          # --------------------------------------------------
+          # 6. Databricks Bundle Summary
+          # --------------------------------------------------
           - script: |
-              databricks bundle summary --target ${{parameters.env}} --profile azure-sp --var "catalog=${{parameters.catalog}}"
+              echo "Generating Databricks Bundle Summary..."
+              databricks bundle summary \
+                --target ${{ parameters.env }} \
+                --var "catalog=${{ parameters.catalog }}"
             workingDirectory: $(Build.SourcesDirectory)/dabs_demo
             displayName: 'Databricks Bundle Summary'
+            env:
+              DATABRICKS_HOST: $(DATABRICKS_HOST)
+              DATABRICKS_CLIENT_ID: $(CLIENT_ID)
+              DATABRICKS_CLIENT_SECRET: $(CLIENT_SECRET)
 
+          # --------------------------------------------------
+          # 7. Databricks Bundle Deploy
+          # --------------------------------------------------
           - script: |
-              databricks bundle deploy --target ${{parameters.env}} --profile azure-sp --var "catalog=${{parameters.catalog}}"
+              echo "Deploying Databricks Bundle..."
+              databricks bundle deploy \
+                --target ${{ parameters.env }} \
+                --var "catalog=${{ parameters.catalog }}"
             workingDirectory: $(Build.SourcesDirectory)/dabs_demo
             displayName: 'Databricks Bundle Deploy'
+            env:
+              DATABRICKS_HOST: $(DATABRICKS_HOST)
+              DATABRICKS_CLIENT_ID: $(CLIENT_ID)
+              DATABRICKS_CLIENT_SECRET: $(CLIENT_SECRET)
