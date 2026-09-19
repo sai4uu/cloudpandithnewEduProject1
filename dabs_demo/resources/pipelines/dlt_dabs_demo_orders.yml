@@ -1,0 +1,15 @@
+resources:
+  pipelines:
+    pipeline_dlt_demo_orders:
+      name: dlt_demo_orders
+      clusters:
+        - label: default
+          node_type_id: Standard_D4s_v3
+          driver_node_type_id: Standard_D4s_v3
+          num_workers: 1
+      libraries:
+        - file:
+            path: ../sql_files/dlt_dabs_demo_orders.sql
+      schema: ${resources.schemas.bronze_schema.name}
+      catalog: ${resources.schemas.bronze_schema.catalog_name}
+      root_path: ../sql_files
