@@ -1,5 +1,5 @@
 # Azure pipeline for DAB
-# Manual trigger
+# Manual triggers
 trigger: none
 
 pool:
